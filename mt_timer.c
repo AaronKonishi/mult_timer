@@ -95,7 +95,9 @@ int timer_del(MT_TIMER_OBJECT *object, int timerfd)
     struct epoll_event event;
     MT_TIMER_NODE *handler = NULL;
 
+    pthread_rwlock_rdlock(&object->timer_rwlock);
     HASH_FIND_INT(object->timer_head, &timerfd, handler);
+    pthread_rwlock_unlock(&object->timer_rwlock);
     if(NULL == handler)
         return 0;
     
