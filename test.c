@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "timer.h"
+#include "mt_timer.h"
 
 void timeout_handle(void *arg)
 {
@@ -14,29 +14,31 @@ void timeout_handler(void *arg)
     printf("[%ld]:timeout2\n", time(NULL));
 }
 
+TIMER_CREATE(test);
+
 int main(void)
 {
-    int timer1;
+    int timer;
     struct itimerspec itimespec;
 
-    timer_init(10);
+    TIMER_INIT(test, 10);
     itimespec.it_value.tv_sec = 3;
     itimespec.it_value.tv_nsec = 0;
     itimespec.it_interval.tv_sec = 1;
     itimespec.it_interval.tv_nsec = 0;
     
-    timer1 = timer_add(&itimespec, 8, timeout_handle, NULL);
-    timer_add(&itimespec, 3, timeout_handler, NULL);
-    printf("[%ld]:timer_add : %d\n", time(NULL), timer_count());
+    timer = TIMER_ADD(test, &itimespec, 8, timeout_handle, NULL);
+    TIMER_ADD(test, &itimespec, 3, timeout_handler, NULL);
+    printf("[%ld]:timer_add : %d\n", time(NULL), TIMER_COUNT(test));
     
     sleep(4);//getchar();
-    timer_del(timer1);
-    printf("[%ld]:timer_del : %d\n", time(NULL), timer_count());
-    timer_clear();
-    printf("[%ld]:timer_clear : %d\n", time(NULL), timer_count());
+    TIMER_DEL(test, timer);
+    printf("[%ld]:timer_del : %d\n", time(NULL), TIMER_COUNT(test));
+    TIMER_CLEAR(test);
+    printf("[%ld]:timer_clear : %d\n", time(NULL), TIMER_COUNT(test));
     getchar();
 
-    timer_deinit();
+    TIMER_DEINIT(test);
     
     return 0;
 }
