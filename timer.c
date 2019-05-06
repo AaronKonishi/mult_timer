@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -77,11 +79,17 @@ int timer_init(int max_num)
     timer_object_name.timer_active_flag = true;
     timer_object_name.timer_epoll_fd = epoll_create(max_num);
     if(timer_object_name.timer_epoll_fd < 0)
+    {
+        printf("MT-Timer error: epoll_create failed %s.\n", strerror(errno));
         return -1;
+    }
 
     if(pthread_create(&timer_object_name.timer_thread_id, NULL, mt_timer_thread_name, NULL) != 0)
+    {
+        printf("MT-Timer error: pthread_create failed %s.\n", strerror(errno));
         return -1;
-
+    }
+    
     return 0;
 }
 
@@ -97,8 +105,8 @@ void timer_deinit(void)
     itimespec.it_interval.tv_nsec = 0;
 
     timer_add(&itimespec, 0, NULL, NULL);
-    
     pthread_join(timer_object_name.timer_thread_id, NULL);
+    timer_clear();
 }
 
 int timer_add(struct itimerspec *itimespec, int repeat, timer_callback_t cb, void *data)
@@ -108,19 +116,25 @@ int timer_add(struct itimerspec *itimespec, int repeat, timer_callback_t cb, voi
 
     handler = (MT_TIMER_NODE *)malloc(sizeof(MT_TIMER_NODE));
     if(NULL == handler)
+    {
+        printf("MT-Timer error: malloc failed %s.\n", strerror(errno));
         return -1;
-
+    }
+    
     handler->timer_cb = cb;
     handler->timer_cnt = repeat;
     handler->timer_data = data;
     handler->timer_fd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC|TFD_NONBLOCK);
     if(handler->timer_fd < 0)
     {
+        printf("MT-Timer error: timerfd_create failed %s.\n", strerror(errno));
         free(handler);
         return -2;
     }
     if(timerfd_settime(handler->timer_fd, 0, itimespec, NULL) == -1)
     {
+        printf("MT-Timer error: timerfd_settime failed %s.\n", strerror(errno));
+        close(handler->timer_fd);
         free(handler);
         return -3;
     }
@@ -129,6 +143,8 @@ int timer_add(struct itimerspec *itimespec, int repeat, timer_callback_t cb, voi
     event.data.ptr = handler;
     if(epoll_ctl(timer_object_name.timer_epoll_fd, EPOLL_CTL_ADD, handler->timer_fd, &event) < 0)
     {
+        printf("MT-Timer error: epoll_ctl ADD failed %s.\n", strerror(errno));
+        close(handler->timer_fd);
         free(handler);
         return -4;
     }
@@ -148,13 +164,18 @@ int timer_del(int timerfd)
     HASH_FIND_INT(timer_object_name.timer_head, &timerfd, handler);
     if(NULL == handler)
         return 0;
-    pthread_rwlock_wrlock(&timer_object_name.timer_rwlock);
-    HASH_DEL(timer_object_name.timer_head, handler);
-    pthread_rwlock_unlock(&timer_object_name.timer_rwlock);
+    
     event.data.ptr = (void *)handler;
     event.events = EPOLLIN | EPOLLET;
     if(epoll_ctl(timer_object_name.timer_epoll_fd, EPOLL_CTL_DEL, handler->timer_fd, &event) < 0)
+    {
+        printf("MT-Timer error: epoll_ctl DEL failed %s.\n", strerror(errno));
         return -1;
+    }
+
+    pthread_rwlock_wrlock(&timer_object_name.timer_rwlock);
+    HASH_DEL(timer_object_name.timer_head, handler);
+    pthread_rwlock_unlock(&timer_object_name.timer_rwlock);
     close(handler->timer_fd);
     free(handler);
     
@@ -178,12 +199,15 @@ int timer_clear(void)
     event.events = EPOLLIN | EPOLLET;
     for(handler = timer_object_name.timer_head; handler != NULL; handler = handler->hh.next)
     {
+        event.data.ptr = (void *)handler;
+        if(epoll_ctl(timer_object_name.timer_epoll_fd, EPOLL_CTL_DEL, handler->timer_fd, &event) < 0)
+        {
+            printf("MT-Timer error: epoll_ctl CLEAR failed %s.\n", strerror(errno));
+            return -1;
+        }
         pthread_rwlock_wrlock(&timer_object_name.timer_rwlock);
         HASH_DEL(timer_object_name.timer_head, handler);
         pthread_rwlock_unlock(&timer_object_name.timer_rwlock);
-        event.data.ptr = (void *)handler;
-        if(epoll_ctl(timer_object_name.timer_epoll_fd, EPOLL_CTL_DEL, handler->timer_fd, &event) < 0)
-            return -1;
         close(handler->timer_fd);
         free(handler);
     }
