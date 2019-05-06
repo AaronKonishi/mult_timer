@@ -1,4 +1,4 @@
-# timer（MT译为Multiple或Multi）
+# MT_Timer（MT译为Multiple或Multi）
 
 #### 介绍
 
