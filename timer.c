@@ -27,10 +27,10 @@ typedef struct {
     bool timer_active_flag;
     MT_TIMER_NODE *timer_head;
     pthread_t timer_thread_id;
-    pthread_mutex_t  timer_mutex;
+    pthread_rwlock_t  timer_rwlock;
 }MT_TIMER_OBJECT;
 
-MT_TIMER_OBJECT timer_object_name = {0, -1, false, NULL, 0, PTHREAD_MUTEX_INITIALIZER};
+MT_TIMER_OBJECT timer_object_name = {0, -1, false, NULL, 0, PTHREAD_RWLOCK_INITIALIZER};
 
 static void *mt_timer_thread_name(void *arg)
 {
@@ -40,7 +40,7 @@ static void *mt_timer_thread_name(void *arg)
     struct epoll_event events[timer_object_name.timer_max];
 
     /*pthread_detach(pthread_self());*/
-    
+    printf("MT-Timer Info: timer thread is running.\n");
     while(timer_object_name.timer_active_flag)
     {
         nfds = epoll_wait(timer_object_name.timer_epoll_fd, events, timer_object_name.timer_max, -1);
@@ -67,6 +67,7 @@ static void *mt_timer_thread_name(void *arg)
             }
         }
     }
+    printf("MT-Timer Info: timer thread is exit.\n");
     pthread_exit(NULL);
 }
 
@@ -132,9 +133,9 @@ int timer_add(struct itimerspec *itimespec, int repeat, timer_callback_t cb, voi
         return -4;
     }
 
-    pthread_mutex_lock(&timer_object_name.timer_mutex);
+    pthread_rwlock_wrlock(&timer_object_name.timer_rwlock);
     HASH_ADD_INT(timer_object_name.timer_head, timer_fd, handler);
-    pthread_mutex_unlock(&timer_object_name.timer_mutex);
+    pthread_rwlock_unlock(&timer_object_name.timer_rwlock);
     
     return handler->timer_fd;
 }
@@ -147,9 +148,9 @@ int timer_del(int timerfd)
     HASH_FIND_INT(timer_object_name.timer_head, &timerfd, handler);
     if(NULL == handler)
         return 0;
-    pthread_mutex_lock(&timer_object_name.timer_mutex);
+    pthread_rwlock_wrlock(&timer_object_name.timer_rwlock);
     HASH_DEL(timer_object_name.timer_head, handler);
-    pthread_mutex_unlock(&timer_object_name.timer_mutex);
+    pthread_rwlock_unlock(&timer_object_name.timer_rwlock);
     event.data.ptr = (void *)handler;
     event.events = EPOLLIN | EPOLLET;
     if(epoll_ctl(timer_object_name.timer_epoll_fd, EPOLL_CTL_DEL, handler->timer_fd, &event) < 0)
@@ -162,7 +163,11 @@ int timer_del(int timerfd)
 
 int timer_count(void)
 {
-    return HASH_COUNT(timer_object_name.timer_head);
+    int count = 0;
+    pthread_rwlock_rdlock(&timer_object_name.timer_rwlock);
+    count = (int) HASH_COUNT(timer_object_name.timer_head);
+    pthread_rwlock_unlock(&timer_object_name.timer_rwlock);
+    return count;
 }
 
 int timer_clear(void)
@@ -173,9 +178,9 @@ int timer_clear(void)
     event.events = EPOLLIN | EPOLLET;
     for(handler = timer_object_name.timer_head; handler != NULL; handler = handler->hh.next)
     {
-        pthread_mutex_lock(&timer_object_name.timer_mutex);
+        pthread_rwlock_wrlock(&timer_object_name.timer_rwlock);
         HASH_DEL(timer_object_name.timer_head, handler);
-        pthread_mutex_unlock(&timer_object_name.timer_mutex);
+        pthread_rwlock_unlock(&timer_object_name.timer_rwlock);
         event.data.ptr = (void *)handler;
         if(epoll_ctl(timer_object_name.timer_epoll_fd, EPOLL_CTL_DEL, handler->timer_fd, &event) < 0)
             return -1;
