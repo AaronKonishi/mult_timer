@@ -94,9 +94,11 @@ typedef struct {
         { \
             int nfds, i; \
             char buf[128]; \
+            struct epoll_event event; \
             MT_TIMER_NODE *timer_node = NULL; \
             struct epoll_event events[mt_timer_##name.timer_max]; \
             /*pthread_detach(pthread_self());*/ \
+            event.events = EPOLLIN | EPOLLET; \
             MT_TIMER_PRINT_INL("MT-Timer Info: %s thread is running.\n", #name); \
             while(mt_timer_##name.timer_active_flag) \
             { \
@@ -119,6 +121,16 @@ typedef struct {
                         { \
                             timer_node->timer_cb(timer_node->timer_data); \
                             timer_node->timer_cnt--; \
+                        } \
+                        else \
+                        { \
+                            event.data.ptr = (void *)timer_node; \
+                            epoll_ctl(mt_timer_##name.timer_epoll_fd, EPOLL_CTL_DEL, timer_node->timer_fd, &event); \
+                            pthread_rwlock_wrlock(&mt_timer_##name.timer_rwlock); \
+                            HASH_DEL(mt_timer_##name.timer_head, timer_node); \
+                            pthread_rwlock_unlock(&mt_timer_##name.timer_rwlock); \
+                            close(timer_node->timer_fd); \
+                            free(timer_node); \
                         } \
                     } \
                 } \
