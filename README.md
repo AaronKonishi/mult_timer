@@ -1,10 +1,10 @@
 # MT_Timer（MT译为Multiple或Multi）
 
-#### 介绍
+#### 一、介绍
 
 一个Linux下的超级简洁的定时器：*利用epoll机制和timerfd新特性实现的多重、多用、多个定时器实现*。只需要使用TIMER_CREATE()接口创建一个定时器实体，即**可向其添加成千上万个定时任务，定时任务可达到纳秒级别的精度，且可在同一时间点添加不同的定时任务！**。
 
-#### 软件接口
+#### 二、软件接口
 
 整个定时器包含如下几类接口。
 
@@ -105,13 +105,11 @@ int main(void)
 }
 ```
 
-#### 关于作者
-
-![image](https://images.gitee.com/uploads/images/2019/0510/144101_0c19c8a3_3026819.jpeg)
+#### 三、赞赏作者
 
 ![image](https://images.gitee.com/uploads/images/2019/0510/144101_bc93efba_3026819.jpeg)
 
-#### 参与贡献
+#### 四、参与贡献
 
 1. Fork 本仓库
 2. 新建 Feat_xxx 分支
@@ -119,7 +117,7 @@ int main(void)
 4. 新建 Pull Request
 
 
-#### 码云特技
+#### 五、码云特技
 
 1. 使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
 2. 码云官方博客 [blog.gitee.com](https://blog.gitee.com)
