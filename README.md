@@ -55,7 +55,7 @@ TIMER_CLEAR(name);
 
 TIMER_COUNT(name)用于查询定时器实例name中现存的定时任务个数；TIMER_CLEAR(name)用于清空定时器实例name中的所有定时任务。
 
-#### 使用实例
+#### 三、使用实例
 
 下面是一个非常简单的使用示例：共创建了两个定时器，每个第一次超时都是3S，后面每隔1S超时一次；但第一个定时器频次为8，第二个定时器频次为3；当所有定时器都超时后，输入回车即可退出：
 ```
@@ -105,11 +105,11 @@ int main(void)
 }
 ```
 
-#### 三、赞赏作者
+#### 四、赞赏作者
 
 ![image](https://images.gitee.com/uploads/images/2019/0510/144101_bc93efba_3026819.jpeg)
 
-#### 四、参与贡献
+#### 五、参与贡献
 
 1. Fork 本仓库
 2. 新建 Feat_xxx 分支
@@ -117,7 +117,7 @@ int main(void)
 4. 新建 Pull Request
 
 
-#### 五、码云特技
+#### 六、码云特技
 
 1. 使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
 2. 码云官方博客 [blog.gitee.com](https://blog.gitee.com)
