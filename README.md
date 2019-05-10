@@ -105,6 +105,12 @@ int main(void)
 }
 ```
 
+#### 关于作者
+
+![image](https://images.gitee.com/uploads/images/2019/0510/144101_0c19c8a3_3026819.jpeg)
+
+![image](https://images.gitee.com/uploads/images/2019/0510/144101_bc93efba_3026819.jpeg)
+
 #### 参与贡献
 
 1. Fork 本仓库
