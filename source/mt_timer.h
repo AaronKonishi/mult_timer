@@ -70,6 +70,7 @@ typedef enum{false, true} bool;
 #define bool bool
 #endif
 
+typedef void (*timer_release_t)(void *data);
 typedef void (*timer_callback_t)(void *data);
 
 typedef struct {
@@ -78,6 +79,7 @@ typedef struct {
     void *timer_data;
     UT_hash_handle hh;
     timer_callback_t timer_cb;
+    timer_release_t release_cb;
 }MT_TIMER_NODE; /* MT mean multiple */
 
 typedef struct {
@@ -130,6 +132,8 @@ typedef struct {
                             HASH_DEL(mt_timer_##name.timer_head, timer_node); \
                             pthread_rwlock_unlock(&mt_timer_##name.timer_rwlock); \
                             close(timer_node->timer_fd); \
+                            if(timer_node->release_cb) \
+                                timer_node->release_cb(timer_node->timer_data); \
                             free(timer_node); \
                         } \
                     } \
@@ -142,7 +146,7 @@ typedef struct {
 extern int timer_init(MT_TIMER_OBJECT *object, void *(*thread_handler)(void *arg), int max_num);
 extern void timer_deinit(MT_TIMER_OBJECT *object);
 extern int timer_add(MT_TIMER_OBJECT *object, struct itimerspec *itimespec,
-                       int repeat, timer_callback_t cb, void *data);
+                       int repeat, timer_callback_t cb, void *data, timer_release_t rb);
 extern int timer_del(MT_TIMER_OBJECT *object, int timerfd);
 extern int timer_count(MT_TIMER_OBJECT *object);
 extern int timer_clear(MT_TIMER_OBJECT *object);
@@ -157,8 +161,8 @@ extern int timer_clear(MT_TIMER_OBJECT *object);
         timer_init(&mt_timer_##name, mt_timer_thread_##name, max)
 #define TIMER_DEINIT(name) \
         timer_deinit(&mt_timer_##name)
-#define TIMER_ADD(name, itimespec, repeat, cb, data) \
-        timer_add(&mt_timer_##name, itimespec, repeat, cb, data)
+#define TIMER_ADD(name, itimespec, repeat, cb, data, rb) \
+        timer_add(&mt_timer_##name, itimespec, repeat, cb, data, rb)
 #define TIMER_DEL(name, timerfd) \
         timer_del(&mt_timer_##name, timerfd)
 #define TIMER_COUNT(name) timer_count(&mt_timer_##name)

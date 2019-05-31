@@ -51,8 +51,8 @@ int main(void)
     itimespec.it_interval.tv_sec = 1;
     itimespec.it_interval.tv_nsec = 0;
     
-    timer = TIMER_ADD(test, &itimespec, 8, timeout_handle, NULL);
-    TIMER_ADD(test, &itimespec, 3, timeout_handler, NULL);
+    timer = TIMER_ADD(test, &itimespec, 8, timeout_handle, NULL, NULL);
+    TIMER_ADD(test, &itimespec, 3, timeout_handler, NULL, NULL);
     printf("[%ld]:timer_add : %d\n", time(NULL), TIMER_COUNT(test));
     
     sleep(4);//getchar();

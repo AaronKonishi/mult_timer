@@ -61,13 +61,13 @@ void timer_deinit(MT_TIMER_OBJECT *object)
     itimespec.it_interval.tv_sec = 0;
     itimespec.it_interval.tv_nsec = 0;
 
-    timer_add(object, &itimespec, 0, NULL, NULL);
+    timer_add(object, &itimespec, 0, NULL, NULL, NULL);
     pthread_join(object->timer_thread_id, NULL);
     timer_clear(object);
 }
 
 int timer_add(MT_TIMER_OBJECT *object, struct itimerspec *itimespec,
-                int repeat, timer_callback_t cb, void *data)
+                int repeat, timer_callback_t cb, void *data, timer_release_t rb)
 {
     struct epoll_event event;
     MT_TIMER_NODE *handler = NULL;
@@ -80,6 +80,7 @@ int timer_add(MT_TIMER_OBJECT *object, struct itimerspec *itimespec,
     }
     
     handler->timer_cb = cb;
+    handler->release_cb = rb;
     handler->timer_cnt = repeat;
     handler->timer_data = data;
     handler->timer_fd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC|TFD_NONBLOCK);
@@ -137,6 +138,8 @@ int timer_del(MT_TIMER_OBJECT *object, int timerfd)
     HASH_DEL(object->timer_head, handler);
     pthread_rwlock_unlock(&object->timer_rwlock);
     close(handler->timer_fd);
+    if(handler->release_cb)
+        handler->release_cb(handler->timer_data);
     free(handler);
     
     return 0;
@@ -165,6 +168,8 @@ int timer_clear(MT_TIMER_OBJECT *object)
         HASH_DEL(object->timer_head, handler);
         pthread_rwlock_unlock(&object->timer_rwlock);
         close(handler->timer_fd);
+        if(handler->release_cb)
+            handler->release_cb(handler->timer_data);
         free(handler);
     }
     return 0;
