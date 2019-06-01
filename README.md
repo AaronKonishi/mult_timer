@@ -22,7 +22,7 @@ TIMER_DEINIT(name);
 
 3. **添加和删除定时任务**：
 ```
-TIMER_ADD(name, itimespec, repeat, cb, data);
+TIMER_ADD(name, itimespec, repeat, cb, data, rb);
 TIMER_DEL(name, timerfd);
 ```
 
